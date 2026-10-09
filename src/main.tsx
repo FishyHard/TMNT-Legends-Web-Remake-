@@ -1,3 +1,4 @@
+import BattleArena3D from './BattleArena3D';
 import ModelViewer from './ModelViewer';
 import React,{useState} from 'react';
 import{createRoot}from'react-dom/client';
@@ -54,6 +55,7 @@ function App(){
  }
  function reset(){setUnits(initial());setTurn(0);setSpecial(false);setLog(['Battle started!']);}
  return <main><header><small>UNOFFICIAL FAN-MADE PROTOTYPE</small><h1>TMNT <em>LEGENDS</em></h1><p>Turn-based battle · Round {Math.floor(turn/6)+1}</p></header>
+ <BattleArena3D units={units} activeId={actorId} onSelect={act} disabled={!hero||ended}/>
  <section className="arena">
  {(['enemies','heroes'] as Side[]).map(side=><div key={side}><h2>{side==='heroes'?'YOUR SQUAD':'ENEMY SQUAD'}</h2><div className="team">{units.filter(u=>u.side===side).map(u=><button key={u.id} disabled={!hero||ended||u.hp===0} onClick={()=>act(u.id)} className={`unit ${actorId===u.id?'active':''} ${u.hp===0?'dead':''}`}><div className="portrait">{['🐢','🐢','🐢','🥷','⚔️','🤖'][u.id]}</div><strong>{u.name}</strong><div className="bar"><span style={{width:`${100*u.hp/u.max}%`}}/></div><small>{u.hp}/{u.max} HP</small></button>)}</div></div>)}
  </section>
