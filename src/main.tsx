@@ -1,3 +1,4 @@
+import ModelViewer from './ModelViewer';
 import React,{useState} from 'react';
 import{createRoot}from'react-dom/client';
 import './style.css';
@@ -57,6 +58,6 @@ function App(){
  {(['enemies','heroes'] as Side[]).map(side=><div key={side}><h2>{side==='heroes'?'YOUR SQUAD':'ENEMY SQUAD'}</h2><div className="team">{units.filter(u=>u.side===side).map(u=><button key={u.id} disabled={!hero||ended||u.hp===0} onClick={()=>act(u.id)} className={`unit ${actorId===u.id?'active':''} ${u.hp===0?'dead':''}`}><div className="portrait">{['🐢','🐢','🐢','🥷','⚔️','🤖'][u.id]}</div><strong>{u.name}</strong><div className="bar"><span style={{width:`${100*u.hp/u.max}%`}}/></div><small>{u.hp}/{u.max} HP</small></button>)}</div></div>)}
  </section>
  <section className="controls">{ended?<><h2>{won?'Victory!':'Defeat!'}</h2><button onClick={reset}>Play again</button></>:<><h2>{actor.name}'s turn</h2>{hero?<><p>Select an ability, then tap a {special&&actor.heal?'teammate':'foe'}.</p><button className={!special?'selected':''} onClick={()=>setSpecial(false)}>Strike</button><button disabled={actor.cooldown>0} className={special?'selected':''} onClick={()=>setSpecial(true)}>{actor.heal?'Repair':'Power Strike'}{actor.cooldown>0?` (CD ${actor.cooldown})`:''}</button></>:<button onClick={enemyMove}>Continue enemy turn</button>}</>}<div className="log">{log.map((s,i)=><p key={i}>{s}</p>)}</div></section>
- <footer>Original placeholder visuals · Not affiliated with TMNT rights holders</footer></main>;
+ <ModelViewer/><footer>Original placeholder visuals · Not affiliated with TMNT rights holders</footer></main>;
 }
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
