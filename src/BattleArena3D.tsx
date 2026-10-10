@@ -11,6 +11,7 @@ export default function BattleArena3D({units,activeId,onSelect,disabled}:Props){
  const mount=useRef<HTMLDivElement>(null);
  const [localModel,setLocalModel]=useState<{file:File;fighterId:number}|null>(null);
  const [modelStatus,setModelStatus]=useState('');
+ const [importTarget,setImportTarget]=useState(0);
  const installModel=useRef<((file:File,fighterId:number)=>void)|null>(null);
  const selectRef=useRef(onSelect);
  const stateRef=useRef({units,activeId,disabled});
@@ -69,6 +70,7 @@ export default function BattleArena3D({units,activeId,onSelect,disabled}:Props){
     const figure=figures.get(fighterId)!;
     figure.children.forEach(child=>{if(child.name==='localMesh')figure.remove(child)});
     const object=gltf.scene;object.name='localMesh';
+    object.traverse(child=>{if(child instanceof THREE.Mesh){child.userData.fighterId=fighterId;targets.push(child)}});
     const bounds=new THREE.Box3().setFromObject(object);
     const size=bounds.getSize(new THREE.Vector3());
     const center=bounds.getCenter(new THREE.Vector3());
@@ -76,7 +78,7 @@ export default function BattleArena3D({units,activeId,onSelect,disabled}:Props){
     object.scale.setScalar(2.6/height);
     object.position.set(-center.x*2.6/height,-bounds.min.y*2.6/height,-center.z*2.6/height);
     figure.add(object);imported=object;
-    for(const child of figure.children){if(child!==object&&child.name!=='activeRing'&&child.name!=='healthFill')child.visible=false}
+    for(const child of figure.children){if(child!==object&&child.name!=='activeRing'&&child.name!=='healthFill'&&child instanceof THREE.Mesh&&child.geometry.type!=='PlaneGeometry')child.visible=false}
     setModelStatus('Local model loaded for '+(stateRef.current.units.find(u=>u.id===fighterId)?.name||'fighter')+'.');
    },undefined,()=>{URL.revokeObjectURL(url);setModelStatus('Could not load this GLB file.')});
   };
@@ -127,7 +129,7 @@ export default function BattleArena3D({units,activeId,onSelect,disabled}:Props){
  useEffect(()=>{if(localModel)installModel.current?.(localModel.file,localModel.fighterId)},[localModel]);
  return <section aria-label="Interactive 3D battle arena" style={{maxWidth:1000,margin:'12px auto'}}>
   <div ref={mount} style={{height:'min(58vw,440px)',minHeight:270,width:'100%',borderRadius:14,overflow:'hidden',touchAction:'pan-y',background:'#07131b'}}/>
-  <label style={{display:'block',marginTop:10,fontSize:13}}>Import an original GLB for a fighter (local only): <select aria-label="Fighter to replace" id="fighter-import-target" defaultValue="0">{units.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select> <input type="file" accept=".glb,model/gltf-binary" onChange={e=>{setModelStatus('Loading local model…');setLocalModel(e.target.files?.[0]?{file:e.target.files[0],fighterId:Number((document.getElementById('fighter-import-target') as HTMLSelectElement)?.value||0)}:null)}}/></label>
+  <label style={{display:'block',marginTop:10,fontSize:13}}>Import an original GLB for a fighter (local only): <select aria-label="Fighter to replace" value={importTarget} onChange={e=>setImportTarget(Number(e.target.value))}>{units.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select> <input type="file" accept=".glb,model/gltf-binary" onChange={e=>{setModelStatus('Loading local model…');setLocalModel(e.target.files?.[0]?{file:e.target.files[0],fighterId:importTarget}:null)}}/></label>
   {modelStatus&&<p role="status">{modelStatus}</p>}
   <p style={{textAlign:'center',fontSize:12,opacity:.75}}>3D prototype arena · Procedural placeholder fighters · Tap a fighter to target</p>
  </section>;
