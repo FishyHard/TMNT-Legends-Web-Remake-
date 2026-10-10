@@ -1,4 +1,5 @@
-import {useEffect,useRef} from 'react';
+import {useEffect,useRef,useState} from 'react';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -8,6 +9,9 @@ type Props={units:Fighter[];activeId:number;onSelect:(id:number)=>void;disabled:
 /** Procedural stand-in arena. Original character models are NOT included. */
 export default function BattleArena3D({units,activeId,onSelect,disabled}:Props){
  const mount=useRef<HTMLDivElement>(null);
+ const [localModel,setLocalModel]=useState<File|null>(null);
+ const [modelStatus,setModelStatus]=useState('');
+ const installModel=useRef<((file:File)=>void)|null>(null);
  const selectRef=useRef(onSelect);
  const stateRef=useRef({units,activeId,disabled});
  selectRef.current=onSelect;
@@ -55,6 +59,27 @@ export default function BattleArena3D({units,activeId,onSelect,disabled}:Props){
    scene.add(group);figures.set(id,group);
   }
   for(let i=0;i<6;i++)createFighter(i);
+  let imported:THREE.Object3D|null=null;
+  installModel.current=(file:File)=>{
+   const url=URL.createObjectURL(file);
+   new GLTFLoader().load(url,gltf=>{
+    URL.revokeObjectURL(url);
+    if(disposed)return;
+    if(imported)scene.remove(imported);
+    const figure=figures.get(0)!;
+    figure.children.forEach(child=>{if(child.name==='localMesh')figure.remove(child)});
+    const object=gltf.scene;object.name='localMesh';
+    const bounds=new THREE.Box3().setFromObject(object);
+    const size=bounds.getSize(new THREE.Vector3());
+    const center=bounds.getCenter(new THREE.Vector3());
+    const height=Math.max(size.y,.0001);
+    object.scale.setScalar(2.6/height);
+    object.position.set(-center.x*2.6/height,-bounds.min.y*2.6/height,-center.z*2.6/height);
+    figure.add(object);imported=object;
+    for(const child of figure.children){if(child!==object&&child.name!=='activeRing'&&child.name!=='healthFill')child.visible=false}
+    setModelStatus('Local Leonardo model loaded into the battle scene.');
+   },undefined,()=>{URL.revokeObjectURL(url);setModelStatus('Could not load this GLB file.')});
+  };
   const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;
   controls.minDistance=8;controls.maxDistance=24;controls.maxPolarAngle=Math.PI/2.15;
   controls.target.set(0,1,0);controls.update();
@@ -92,15 +117,18 @@ export default function BattleArena3D({units,activeId,onSelect,disabled}:Props){
   }
   render();
   return ()=>{
-   disposed=true;cancelAnimationFrame(frame);observer.disconnect();controls.dispose();
+   disposed=true;installModel.current=null;cancelAnimationFrame(frame);observer.disconnect();controls.dispose();
    renderer.domElement.removeEventListener('pointerdown',pointerDown);
    renderer.domElement.removeEventListener('pointerup',pointerUp);
    scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.LineSegments){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
    renderer.dispose();renderer.domElement.remove();
   };
  },[]);
+ useEffect(()=>{if(localModel)installModel.current?.(localModel)},[localModel]);
  return <section aria-label="Interactive 3D battle arena" style={{maxWidth:1000,margin:'12px auto'}}>
   <div ref={mount} style={{height:'min(58vw,440px)',minHeight:270,width:'100%',borderRadius:14,overflow:'hidden',touchAction:'pan-y',background:'#07131b'}}/>
+  <label style={{display:'block',marginTop:10,fontSize:13}}>Use your locally extracted Leonardo GLB in the arena: <input type="file" accept=".glb,model/gltf-binary" onChange={e=>{setModelStatus('Loading local model…');setLocalModel(e.target.files?.[0]??null)}}/></label>
+  {modelStatus&&<p role="status">{modelStatus}</p>}
   <p style={{textAlign:'center',fontSize:12,opacity:.75}}>3D prototype arena · Procedural placeholder fighters · Tap a fighter to target</p>
  </section>;
 }
